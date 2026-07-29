@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=development
+    restart: always
+
+  # Future ready: Redis container for caching and Celery tasks
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+    restart: always

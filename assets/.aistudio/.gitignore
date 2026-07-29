@@ -1,0 +1,53 @@
+# Python
+backend/.venv/
+backend/__pycache__/
+**/__pycache__/
+*.pyc
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Environment
+backend/.env
+frontend/.env
+.env
+
+# Uploads
+backend/uploads/
+backend/logs/
+backend/recordings/
+
+# Docker
+*.pid
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Root node_modules (if present)
+node_modules/
+
+# Local Node.js binaries (if accidentally copied)
+node.exe
+npm
+npm.cmd
+npm.ps1
+npx
+npx.cmd
+npx.ps1
+corepack
+corepack.cmd
+
+# Archives
+*.zip
+*.rar
+*.7z
+
+# Build/cache
+build/
+dist/

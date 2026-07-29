@@ -1,0 +1,39 @@
+# Global Docker Ignore file for NEXORA AI Classroom Portal
+
+# Version control & IDE
+.git
+.gitignore
+.gitattributes
+.vscode
+.idea
+
+# Python / Backend temporary files
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/.venv
+**/.pytest_cache
+**/.coverage
+**/htmlcov/
+**/*.db
+**/*.sqlite3
+
+# Node / Frontend temporary files
+**/node_modules/
+**/dist/
+**/build/
+**/.nx/
+**/.next/
+**/.turbo/
+
+# Environment and secret files
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Logs and runtime data
+**/logs/
+**/*.log
+**/tmp/
+**/temp/
+**/.DS_Store

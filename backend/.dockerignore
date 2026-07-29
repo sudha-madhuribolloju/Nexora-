@@ -1,0 +1,34 @@
+# Backend Docker Ignore file for NEXORA AI Classroom Portal
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+
+# Local databases and runtime state
+*.db
+*.sqlite3
+nexora_local.db
+
+# Logs and persistent uploads (mounted dynamically)
+logs/
+uploads/
+*.log
+
+# Secrets & Local Configs
+.env
+.env.local
+.env.production
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store

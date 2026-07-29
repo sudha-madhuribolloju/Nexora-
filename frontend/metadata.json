@@ -1,0 +1,6 @@
+{
+  "name": "NEXORA - AI Classroom Student Agent",
+  "description": "An enterprise-grade AI Classroom Student Agent that listens, learns, summarizes lectures, generates quizzes, notes, and assists teachers and students with advanced transcription, NLP analysis, and intelligent memory.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
