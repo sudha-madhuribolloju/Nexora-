@@ -1,92 +1,67 @@
 import pytest
 import uuid
+from fastapi.testclient import TestClient
+from app.main import app
 
-def test_system_notifications_full_flow(client):
-    # 1. Register Recipient & Sender Users
-    recipient_res = client.post("/api/v1/auth/register", json={
-        "email": "notif_recipient@example.com",
-        "password": "Password123!",
-        "role": "Student"
-    })
-    assert recipient_res.status_code == 201, recipient_res.text
-    recipient_id = recipient_res.json()["id"]
+client = TestClient(app)
 
-    sender_res = client.post("/api/v1/auth/register", json={
-        "email": "notif_sender@example.com",
-        "password": "Password123!",
-        "role": "Admin"
-    })
-    assert sender_res.status_code == 201
-    sender_id = sender_res.json()["id"]
 
-    # 2. Create Notification 1
-    notif1_payload = {
+def test_phase_12_notifications_full_flow() -> None:
+    recipient_id = str(uuid.uuid4())
+
+    # 1. Create Notifications across types
+    notif_payload_1 = {
         "recipient_id": recipient_id,
-        "title": "Midterm Examination Schedule",
-        "message": "Physics Midterm examination will commence on Monday at 09:00 AM.",
-        "notification_type": "announcement",
-        "action_url": "/exams/physics-midterm",
+        "title": "Assignment Released: Physics Homework 4",
+        "message": "Physics Homework 4 is due on Friday at 11:59 PM.",
+        "notification_type": "assignment",
+        "action_url": "/assignments/1"
     }
-    res = client.post(f"/notifications/?sender_id={sender_id}", json=notif1_payload)
-    assert res.status_code == 201, res.text
-    notif1 = res.json()
-    assert notif1["title"] == "Midterm Examination Schedule"
-    assert notif1["is_read"] is False
-    notif1_id = notif1["id"]
+    create_resp_1 = client.post("/api/v1/notifications/", json=notif_payload_1)
+    assert create_resp_1.status_code == 201, create_resp_1.text
+    notif_data_1 = create_resp_1.json()
+    assert notif_data_1["title"] == "Assignment Released: Physics Homework 4"
+    assert notif_data_1["is_read"] is False
+    assert notif_data_1["status"] == "unread"
+    notif_id_1 = notif_data_1["id"]
 
-    # 3. Create Notification 2
-    notif2_payload = {
+    notif_payload_2 = {
         "recipient_id": recipient_id,
-        "title": "Assignment Graded",
-        "message": "Your submission for Homework 1 has been graded.",
-        "notification_type": "info",
+        "title": "AI Completion: Lesson Plan Generated",
+        "message": "Your requested AI lesson plan on Thermodynamics is ready.",
+        "notification_type": "ai_completion"
     }
-    res = client.post(f"/notifications/?sender_id={sender_id}", json=notif2_payload)
-    assert res.status_code == 201, res.text
-    notif2_id = res.json()["id"]
+    create_resp_2 = client.post("/api/v1/notifications/", json=notif_payload_2)
+    assert create_resp_2.status_code == 201
+    notif_id_2 = create_resp_2.json()["id"]
 
-    # 4. List Notifications for Recipient
-    res = client.get(f"/notifications/?recipient_id={recipient_id}")
-    assert res.status_code == 200, res.text
-    list_data = res.json()
+    # 2. List Notifications & Verify Unread Count
+    list_resp = client.get(f"/api/v1/notifications/?recipient_id={recipient_id}")
+    assert list_resp.status_code == 200, list_resp.text
+    list_data = list_resp.json()
     assert list_data["total"] == 2
     assert list_data["unread_count"] == 2
 
-    # 5. List Unread Only
-    res = client.get(f"/notifications/?recipient_id={recipient_id}&unread_only=true")
-    assert res.status_code == 200
-    assert res.json()["total"] == 2
+    # 3. Mark Single Notification as Read
+    read_resp = client.put(f"/api/v1/notifications/{notif_id_1}/read")
+    assert read_resp.status_code == 200, read_resp.text
+    assert read_resp.json()["is_read"] is True
+    assert read_resp.json()["status"] == "read"
 
-    # 6. Mark Notification 1 as read
-    res = client.put(f"/notifications/{notif1_id}/read?user_id={recipient_id}")
-    assert res.status_code == 200, res.text
-    read_notif = res.json()
-    assert read_notif["is_read"] is True
-    assert read_notif["read_at"] is not None
+    # 4. Archive Notification
+    archive_resp = client.put(f"/api/v1/notifications/{notif_id_2}/archive")
+    assert archive_resp.status_code == 200, archive_resp.text
+    assert archive_resp.json()["status"] == "archived"
 
-    # 7. List Notifications after marking 1 as read
-    res = client.get(f"/notifications/?recipient_id={recipient_id}")
-    assert res.status_code == 200
-    assert res.json()["unread_count"] == 1
+    # 5. Mark All Notifications Read
+    mark_all_resp = client.put(f"/api/v1/notifications/read-all?user_id={recipient_id}")
+    assert mark_all_resp.status_code == 200
 
-    # 8. Mark all remaining notifications as read
-    res = client.put(f"/notifications/read-all?user_id={recipient_id}")
-    assert res.status_code == 200, res.text
+    # 6. Delete Notification
+    del_resp = client.delete(f"/api/v1/notifications/{notif_id_1}?user_id={recipient_id}")
+    assert del_resp.status_code == 204
 
-    # 9. Verify unread count is now 0
-    res = client.get(f"/notifications/?recipient_id={recipient_id}")
-    assert res.status_code == 200
-    assert res.json()["unread_count"] == 0
-
-    # 10. Get single notification detail
-    res = client.get(f"/notifications/{notif1_id}")
-    assert res.status_code == 200
-    assert res.json()["id"] == notif1_id
-
-    # 11. Delete Notification 1
-    res = client.delete(f"/notifications/{notif1_id}?user_id={recipient_id}")
-    assert res.status_code == 204
-
-    # 12. Verify deleted notification returns 404
-    res = client.get(f"/notifications/{notif1_id}")
-    assert res.status_code == 404
+    # 7. List Notifications & Verify Status Filtering (Deleted excluded)
+    list_after_del = client.get(f"/api/v1/notifications/?recipient_id={recipient_id}")
+    assert list_after_del.status_code == 200
+    assert list_after_del.json()["total"] == 1

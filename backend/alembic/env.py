@@ -55,7 +55,7 @@ def _import_all_models() -> None:
     # —— Migration 005 — People ————————————————————————————————————
     import app.models.people      # noqa: F401
 
-    # —— Migration 006 — Courses, Sessions, Attendance, Assignments, Quizzes, Notifications, Documents, KB
+    # ── Migration 006 — Courses, Sessions, Attendance, Assignments, Quizzes, Notifications, Documents, KB
     import app.models.course        # noqa: F401
     import app.models.subject       # noqa: F401  (CourseSubject)
     import app.models.session       # noqa: F401  (ClassSession)
@@ -64,14 +64,15 @@ def _import_all_models() -> None:
     import app.models.quiz          # noqa: F401
     import app.models.notification  # noqa: F401
     import app.models.document      # noqa: F401
+    import app.models.document_chunk # noqa: F401
     import app.models.knowledge_base  # noqa: F401
+    import app.models.fees          # noqa: F401
+    import app.models.recording     # noqa: F401
+    import app.models.otp           # noqa: F401
 
-    # —— Migration 007 — AI / Knowledge Chunks (pgvector) ————————————
-    # import app.models.ai_conversation  # noqa: F401
-    # import app.models.knowledge        # noqa: F401
-
-    # —— Migration 008 — Audit Log (future) ——————————————————————————
-    # import app.models.audit_log  # noqa: F401
+    # ── Migration 007 — Audit Logs & Chat Sessions / AI Conversations ──
+    import app.models.audit         # noqa: F401
+    import app.models.chat          # noqa: F401
 
 
 _import_all_models()

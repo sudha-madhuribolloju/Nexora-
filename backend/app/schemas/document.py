@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Any
 from pydantic import BaseModel, ConfigDict
 from app.models.document import DocumentCategory
 
@@ -11,6 +11,7 @@ class DocumentBase(BaseModel):
     category: DocumentCategory = DocumentCategory.GENERAL
     course_id: Optional[uuid.UUID] = None
     is_public: bool = False
+    tags: Optional[List[str]] = None
 
 
 class DocumentCreate(DocumentBase):
@@ -18,6 +19,7 @@ class DocumentCreate(DocumentBase):
     file_url: str
     file_type: Optional[str] = None
     file_size_bytes: Optional[int] = None
+    file_hash: Optional[str] = None
 
 
 class DocumentResponse(DocumentBase):
@@ -27,6 +29,8 @@ class DocumentResponse(DocumentBase):
     file_url: str
     file_type: Optional[str] = None
     file_size_bytes: Optional[int] = None
+    version: int = 1
+    file_hash: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

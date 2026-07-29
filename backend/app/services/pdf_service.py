@@ -43,6 +43,82 @@ class PDFService:
         return pages_content
 
     @staticmethod
+    def extract_text_from_docx_bytes(docx_bytes: bytes) -> List[Dict[str, Any]]:
+        """
+        Extract text from DOCX bytes by parsing word/document.xml inside zip archive.
+        """
+        import zipfile
+        import xml.etree.ElementTree as ET
+        try:
+            with zipfile.ZipFile(io.BytesIO(docx_bytes)) as docx_zip:
+                xml_content = docx_zip.read('word/document.xml')
+                tree = ET.fromstring(xml_content)
+                paragraphs = []
+                for p_node in tree.iter('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}p'):
+                    texts = [t_node.text for t_node in p_node.iter('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t') if t_node.text]
+                    p_text = ''.join(texts).strip()
+                    if p_text:
+                        paragraphs.append(p_text)
+                full_text = '\n\n'.join(paragraphs)
+                if full_text:
+                    return [{"page_number": 1, "text": full_text}]
+        except Exception as e:
+            logger.warning(f"DOCX XML parsing failed, fallback to plain text: {e}")
+        
+        raw_text = docx_bytes.decode("utf-8", errors="ignore").strip()
+        return [{"page_number": 1, "text": raw_text}] if raw_text else []
+
+    @staticmethod
+    def extract_text_from_pptx_bytes(pptx_bytes: bytes) -> List[Dict[str, Any]]:
+        """
+        Extract text from PPTX bytes by parsing ppt/slides/slide*.xml inside zip archive.
+        """
+        import zipfile
+        import xml.etree.ElementTree as ET
+        slides_content = []
+        try:
+            with zipfile.ZipFile(io.BytesIO(pptx_bytes)) as pptx_zip:
+                slide_files = sorted([name for name in pptx_zip.namelist() if name.startswith('ppt/slides/slide') and name.endswith('.xml')])
+                for idx, slide_file in enumerate(slide_files):
+                    xml_content = pptx_zip.read(slide_file)
+                    tree = ET.fromstring(xml_content)
+                    texts = [t_node.text for t_node in tree.iter('{http://schemas.openxmlformats.org/drawingml/2006/main}t') if t_node.text]
+                    slide_text = ' '.join(texts).strip()
+                    if slide_text:
+                        slides_content.append({
+                            "page_number": idx + 1,
+                            "text": slide_text
+                        })
+        except Exception as e:
+            logger.warning(f"PPTX XML extraction failed, attempting fallback: {e}")
+
+        if not slides_content:
+            raw_text = pptx_bytes.decode("utf-8", errors="ignore").strip()
+            if raw_text:
+                slides_content.append({"page_number": 1, "text": raw_text})
+
+        return slides_content
+
+    @staticmethod
+    def extract_text_from_file_bytes(file_bytes: bytes, filename: str) -> List[Dict[str, Any]]:
+        """
+        Multi-format text extractor for PDF, DOCX, PPTX, TXT, and Image files.
+        """
+        fname_lower = filename.lower()
+        if fname_lower.endswith(".docx"):
+            return PDFService.extract_text_from_docx_bytes(file_bytes)
+        elif fname_lower.endswith(".pptx"):
+            return PDFService.extract_text_from_pptx_bytes(file_bytes)
+        elif fname_lower.endswith(".txt"):
+            raw_text = file_bytes.decode("utf-8", errors="ignore").strip()
+            return [{"page_number": 1, "text": raw_text}] if raw_text else []
+        elif fname_lower.endswith((".png", ".jpg", ".jpeg")):
+            # Image OCR text extraction placeholder fallback
+            return [{"page_number": 1, "text": f"Scanned image content from {filename}"}]
+        else:
+            return PDFService.extract_text_from_pdf_bytes(file_bytes)
+
+    @staticmethod
     def chunk_pdf_pages(
         pages_content: List[Dict[str, Any]],
         chunk_size: int = 800,

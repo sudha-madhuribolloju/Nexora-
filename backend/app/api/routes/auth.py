@@ -4,7 +4,7 @@ from typing import Any
 
 from app.api.dependencies import get_db, get_current_user, oauth2_scheme
 from app.services.auth_service import AuthService
-from app.schemas.auth import Token, LoginSchema, RefreshTokenRequest
+from app.schemas.auth import Token, LoginSchema, RefreshTokenRequest, ForgotPasswordRequest, ResetPasswordRequest
 from app.schemas.user import UserResponse, UserCreate, RegisterResponse, VerifyOTPRequest, ResendOTPRequest
 from app.models.user import User
 
@@ -88,3 +88,27 @@ async def refresh(
     Refresh the session token using a valid refresh token.
     """
     return await AuthService.refresh_session(db, payload.refresh_token)
+
+
+@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Initiate password recovery flow.
+    """
+    return await AuthService.forgot_password(db=db, email=payload.email)
+
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+async def reset_password(
+    payload: ResetPasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Reset password for the authenticated user.
+    """
+    return await AuthService.reset_password(db=db, user_id=current_user.id, new_password=payload.password)
+

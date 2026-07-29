@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any
 
 from app.database.database import get_db
-from app.schemas.auth import LoginRequest, Token, RefreshTokenRequest
+from app.schemas.auth import LoginRequest, Token, RefreshTokenRequest, ForgotPasswordRequest, ResetPasswordRequest
 from app.schemas.user import UserCreate, UserResponse, RegisterResponse, VerifyOTPRequest, ResendOTPRequest
 from app.services.auth_service import AuthService
 from app.core.security import get_current_user, oauth2_scheme
@@ -89,3 +89,26 @@ async def get_me(
     Retrieve profile details for the currently authenticated user.
     """
     return current_user
+
+
+@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Initiate password recovery flow.
+    """
+    return await AuthService.forgot_password(db=db, email=payload.email)
+
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+async def reset_password(
+    payload: ResetPasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Reset password for the authenticated user.
+    """
+    return await AuthService.reset_password(db=db, user_id=current_user.id, new_password=payload.password)

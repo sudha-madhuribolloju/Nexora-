@@ -1,6 +1,3 @@
-"""
-Notifications router — user notification management.
-"""
 import uuid
 from typing import Any, Optional
 from fastapi import APIRouter, Depends, Query, status
@@ -25,7 +22,7 @@ async def list_notifications(
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
-    Retrieve paginated notifications for a recipient user.
+    Retrieve paginated notifications for a recipient user with unread count.
     """
     total, unread, notifications = await NotificationService.list_notifications(
         db, recipient_id, skip, limit, unread_only
@@ -40,7 +37,8 @@ async def create_notification(
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
-    Send a notification to a user.
+    Send an in-app and email notification to a user.
+    Types: assignment, exam, attendance, ai_completion, system_alert, role_change, info, warning.
     """
     return await NotificationService.create_notification(db, data, sender_id=sender_id)
 
@@ -50,9 +48,6 @@ async def get_notification(
     notification_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> Any:
-    """
-    Retrieve a specific notification by ID.
-    """
     return await NotificationService.get_notification(db, notification_id)
 
 
@@ -61,9 +56,6 @@ async def mark_all_read(
     user_id: Optional[uuid.UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
-    """
-    Mark all unread notifications for a user as read.
-    """
     count = await NotificationService.mark_all_read(db, user_id)
     return {"status": "success", "message": f"{count} notification(s) marked as read"}
 
@@ -74,10 +66,16 @@ async def mark_read(
     user_id: Optional[uuid.UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
-    """
-    Mark a single notification as read.
-    """
     return await NotificationService.mark_read(db, notification_id, user_id)
+
+
+@router.put("/{notification_id}/archive", response_model=NotificationResponse, summary="Archive notification")
+async def archive_notification(
+    notification_id: uuid.UUID,
+    user_id: Optional[uuid.UUID] = Query(None),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    return await NotificationService.archive_notification(db, notification_id, user_id)
 
 
 @router.delete("/{notification_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete notification")
@@ -86,7 +84,4 @@ async def delete_notification(
     user_id: Optional[uuid.UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """
-    Delete a notification.
-    """
     await NotificationService.delete_notification(db, notification_id, user_id)

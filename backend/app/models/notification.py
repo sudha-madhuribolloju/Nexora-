@@ -28,12 +28,19 @@ class NotificationType(str, enum.Enum):
     ERROR        = "error"
     REMINDER     = "reminder"
     ANNOUNCEMENT = "announcement"
+    ASSIGNMENT   = "assignment"
+    EXAM         = "exam"
+    ATTENDANCE   = "attendance"
+    AI_COMPLETION = "ai_completion"
+    SYSTEM_ALERT = "system_alert"
+    ROLE_CHANGE  = "role_change"
 
 
 class Notification(Base):
     """
     In-app notification sent to a user.
     Can be system-generated (sender_id=None) or user-to-user.
+    Tracks read, unread, archived, and deleted states.
     """
     __tablename__ = "notifications"
     __table_args__ = (
@@ -50,6 +57,7 @@ class Notification(Base):
     message:           Mapped[str]              = mapped_column(Text, nullable=False)
     notification_type: Mapped[NotificationType] = mapped_column(Enum(NotificationType, name="notificationtype"), default=NotificationType.INFO, nullable=False)
     is_read:           Mapped[bool]             = mapped_column(Boolean, default=False, nullable=False, server_default="false")
+    status:            Mapped[str]              = mapped_column(String(20), default="unread", nullable=False, server_default="unread")
     action_url:        Mapped[Optional[str]]    = mapped_column(Text, nullable=True)
     created_at:        Mapped[datetime]         = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     read_at:           Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

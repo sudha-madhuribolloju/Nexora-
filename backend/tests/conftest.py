@@ -34,21 +34,17 @@ app.dependency_overrides[get_db] = override_get_db
 
 @pytest.fixture(autouse=True)
 def setup_db():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        async def init_tables():
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
 
-    async def init_tables():
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
-            await conn.run_sync(Base.metadata.create_all)
-
-    loop.run_until_complete(init_tables())
-    yield
-    loop.run_until_complete(init_tables())
-
+        loop.run_until_complete(init_tables())
+        yield
+    finally:
+        loop.close()
 
 
 @pytest.fixture

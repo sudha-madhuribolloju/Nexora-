@@ -1,6 +1,6 @@
 import uuid
 from typing import Optional
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 class LoginRequest(BaseModel):
     """
@@ -32,3 +32,17 @@ class TokenData(BaseModel):
     """
     id: Optional[uuid.UUID] = None
     email: Optional[str] = None
+
+class ForgotPasswordRequest(BaseModel):
+    """
+    Schema for initiating password recovery via email.
+    """
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    """
+    Schema for resetting password with new password or reset token.
+    """
+    password: str = Field(..., min_length=6, description="New password must be at least 6 characters long")
+    token: Optional[str] = None
+

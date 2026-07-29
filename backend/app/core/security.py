@@ -141,7 +141,7 @@ async def get_current_user(
         role_claim = payload.get("role")
         email_claim = payload.get("email", "user@nexora.school")
         if role_claim:
-            return User(id=user_id, role=role_claim, email=email_claim, is_active=True)
+            return User(id=user_id, role=role_claim, email=email_claim, is_active=True, is_verified=True)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",

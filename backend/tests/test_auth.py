@@ -1,76 +1,12 @@
-from unittest.mock import MagicMock
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 
 client = TestClient(app)
 
-@pytest.fixture(autouse=True)
-def mock_supabase(monkeypatch):
-    """
-    Fixture to mock the Supabase client interface for state-free auth testing.
-    """
-    mock_client = MagicMock()
-    mock_auth = MagicMock()
-    
-    # 1. Mock Sign Up Response
-    mock_signup_response = MagicMock()
-    mock_signup_response.user = MagicMock(
-        id="00000000-0000-0000-0000-000000000001",
-        email="testuser@example.com"
-    )
-    mock_auth.sign_up.return_value = mock_signup_response
-    
-    # 2. Mock Sign In Response
-    mock_signin_response = MagicMock()
-    mock_signin_response.user = MagicMock(
-        id="00000000-0000-0000-0000-000000000001",
-        email="testuser@example.com",
-        user_metadata={"full_name": "Test User", "role": "Student"}
-    )
-    mock_signin_response.session = MagicMock(
-        access_token="mock_access_token",
-        refresh_token="mock_refresh_token"
-    )
-    mock_auth.sign_in_with_password.return_value = mock_signin_response
-    
-    # 3. Mock Refresh Session Response
-    mock_refresh_response = MagicMock()
-    mock_refresh_response.user = MagicMock(
-        id="00000000-0000-0000-0000-000000000001",
-        email="testuser@example.com",
-        user_metadata={"full_name": "Test User", "role": "Student"}
-    )
-    mock_refresh_response.session = MagicMock(
-        access_token="new_mock_access_token",
-        refresh_token="new_mock_refresh_token"
-    )
-    mock_auth.refresh_session.return_value = mock_refresh_response
-    
-    # 4. Mock Get User Response
-    mock_getuser_response = MagicMock()
-    mock_getuser_response.user = MagicMock(
-        id="00000000-0000-0000-0000-000000000001",
-        email="testuser@example.com",
-        user_metadata={"full_name": "Test User", "role": "Student"}
-    )
-    mock_auth.get_user.return_value = mock_getuser_response
-    
-    mock_client.auth = mock_auth
-    
-    # Apply monkeypatching across files importing supabase client
-    import app.database.supabase
-    monkeypatch.setattr(app.database.supabase, "supabase", mock_client)
-    import app.services.auth_service
-    monkeypatch.setattr(app.services.auth_service, "supabase", mock_client)
-    import app.api.dependencies
-    monkeypatch.setattr(app.api.dependencies, "supabase", mock_client)
-    
-    return mock_client
-
 def test_register_endpoint() -> None:
     """
-    Test user registration successfully calls Supabase sign_up and registers user profile.
+    Test user registration successfully creates user record in DB.
     """
     payload = {
         "email": "testuser@example.com",
@@ -87,49 +23,136 @@ def test_register_endpoint() -> None:
 
 def test_login_endpoint() -> None:
     """
-    Test user login returns mock JWT access token, refresh token, and synced profile.
+    Test user login returns signed JWT access token and refresh token.
     """
-    payload = {
-        "email": "testuser@example.com",
+    # 1. Register first
+    reg_payload = {
+        "email": "loginuser@example.com",
+        "password": "strongpassword123",
+        "full_name": "Login User",
+        "role": "Teacher"
+    }
+    client.post("/api/v1/auth/register", json=reg_payload)
+
+    # 2. Login
+    login_payload = {
+        "email": "loginuser@example.com",
         "password": "strongpassword123"
     }
-    response = client.post("/api/v1/auth/login", json=payload)
+    response = client.post("/api/v1/auth/login", json=login_payload)
     assert response.status_code == 200
     data = response.json()
-    assert data["access_token"] == "mock_access_token"
-    assert data["refresh_token"] == "mock_refresh_token"
-    assert data["user"]["email"] == "testuser@example.com"
-    assert data["user"]["full_name"] == "Test User"
+    assert "access_token" in data
+    assert "refresh_token" in data
+    assert data["token_type"] == "bearer"
 
-def test_logout_endpoint() -> None:
+def test_login_invalid_password() -> None:
     """
-    Test user logout API endpoint with authorization token.
+    Test login fails with 401 for incorrect password.
     """
-    headers = {"Authorization": "Bearer mock_access_token"}
-    response = client.post("/api/v1/auth/logout", headers=headers)
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "success"
+    reg_payload = {
+        "email": "wrongpwd@example.com",
+        "password": "correctpassword123",
+        "full_name": "Wrong Pwd User",
+        "role": "Student"
+    }
+    client.post("/api/v1/auth/register", json=reg_payload)
+
+    login_payload = {
+        "email": "wrongpwd@example.com",
+        "password": "wrongpassword123"
+    }
+    response = client.post("/api/v1/auth/login", json=login_payload)
+    assert response.status_code == 401
 
 def test_refresh_endpoint() -> None:
     """
-    Test token refresh API endpoint.
+    Test refreshing JWT access token with a valid refresh token.
     """
-    payload = {"refresh_token": "mock_refresh_token"}
-    response = client.post("/api/v1/auth/refresh", json=payload)
-    assert response.status_code == 200
-    data = response.json()
-    assert data["access_token"] == "new_mock_access_token"
-    assert data["refresh_token"] == "new_mock_refresh_token"
-    assert data["user"]["email"] == "testuser@example.com"
+    # Register & Login
+    reg_payload = {
+        "email": "refreshuser@example.com",
+        "password": "strongpassword123",
+        "full_name": "Refresh User",
+        "role": "Student"
+    }
+    client.post("/api/v1/auth/register", json=reg_payload)
+
+    login_resp = client.post("/api/v1/auth/login", json={
+        "email": "refreshuser@example.com",
+        "password": "strongpassword123"
+    })
+    tokens = login_resp.json()
+
+    # Refresh
+    refresh_resp = client.post("/api/v1/auth/refresh", json={
+        "refresh_token": tokens["refresh_token"]
+    })
+    assert refresh_resp.status_code == 200
+    refreshed_data = refresh_resp.json()
+    assert "access_token" in refreshed_data
+    assert "refresh_token" in refreshed_data
 
 def test_me_endpoint() -> None:
     """
-    Test retrieving active logged-in user details.
+    Test retrieving active logged-in user profile details via GET /api/v1/auth/me.
     """
-    headers = {"Authorization": "Bearer mock_access_token"}
-    response = client.get("/api/v1/auth/me", headers=headers)
+    reg_payload = {
+        "email": "meuser@example.com",
+        "password": "strongpassword123",
+        "full_name": "Me User",
+        "role": "Parent"
+    }
+    client.post("/api/v1/auth/register", json=reg_payload)
+
+    login_resp = client.post("/api/v1/auth/login", json={
+        "email": "meuser@example.com",
+        "password": "strongpassword123"
+    })
+    token = login_resp.json()["access_token"]
+
+    headers = {"Authorization": f"Bearer {token}"}
+    me_resp = client.get("/api/v1/auth/me", headers=headers)
+    assert me_resp.status_code == 200
+    user_data = me_resp.json()
+    assert user_data["email"] == "meuser@example.com"
+    assert user_data["role"] == "Parent"
+
+def test_forgot_password_endpoint() -> None:
+    """
+    Test initiating forgot password recovery.
+    """
+    reg_payload = {
+        "email": "forgotuser@example.com",
+        "password": "strongpassword123",
+        "full_name": "Forgot User",
+        "role": "Student"
+    }
+    client.post("/api/v1/auth/register", json=reg_payload)
+
+    response = client.post("/api/v1/auth/forgot-password", json={"email": "forgotuser@example.com"})
     assert response.status_code == 200
-    data = response.json()
-    assert data["email"] == "testuser@example.com"
-    assert data["full_name"] == "Test User"
+    assert response.json()["status"] == "success"
+
+def test_logout_endpoint() -> None:
+    """
+    Test user logout endpoint.
+    """
+    reg_payload = {
+        "email": "logoutuser@example.com",
+        "password": "strongpassword123",
+        "full_name": "Logout User",
+        "role": "Student"
+    }
+    client.post("/api/v1/auth/register", json=reg_payload)
+
+    login_resp = client.post("/api/v1/auth/login", json={
+        "email": "logoutuser@example.com",
+        "password": "strongpassword123"
+    })
+    token = login_resp.json()["access_token"]
+
+    headers = {"Authorization": f"Bearer {token}"}
+    response = client.post("/api/v1/auth/logout", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"

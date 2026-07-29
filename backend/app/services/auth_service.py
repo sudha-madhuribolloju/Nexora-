@@ -317,6 +317,49 @@ class AuthService:
         return None
 
     @staticmethod
+    async def forgot_password(db: AsyncSession, email: str) -> Dict[str, Any]:
+        """
+        Dispatches a password reset token/code to the specified email address.
+        """
+        user = await UserRepository.get_by_email(db, email=email)
+        if not user:
+            return {
+                "status": "success",
+                "message": f"If an account exists for {email}, password recovery instructions have been sent."
+            }
+
+        reset_token = create_access_token(
+            subject=user.id,
+            email=user.email,
+            expires_delta=timedelta(minutes=15)
+        )
+        logger.info(f"Password reset token generated for {email}: {reset_token}")
+        return {
+            "status": "success",
+            "message": f"Password recovery instructions sent to {email}.",
+            "reset_token": reset_token if not settings.EMAIL_VERIFICATION_REQUIRED else None
+        }
+
+    @staticmethod
+    async def reset_password(db: AsyncSession, user_id: uuid.UUID, new_password: str) -> Dict[str, Any]:
+        """
+        Updates user password with secure bcrypt hashing.
+        """
+        user = await UserRepository.get_by_id(db, user_id=user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User account not found."
+            )
+
+        hashed_password = get_password_hash(new_password)
+        await UserRepository.update_user(db, db_user=user, updates={"hashed_password": hashed_password})
+        return {
+            "status": "success",
+            "message": "Password updated successfully. Please log in with your new credentials."
+        }
+
+    @staticmethod
     async def update_user(db: AsyncSession, db_user: User, user_in: UserUpdate) -> User:
         updates = user_in.model_dump(exclude_unset=True)
 

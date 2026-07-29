@@ -63,6 +63,9 @@ class Document(TimestampMixin, Base):
     file_size_bytes: Mapped[Optional[int]]      = mapped_column(Integer, nullable=True)
     category:        Mapped[DocumentCategory]   = mapped_column(Enum(DocumentCategory, name="documentcategory"), default=DocumentCategory.GENERAL, nullable=False)
     is_public:       Mapped[bool]               = mapped_column(Boolean, default=False, nullable=False, server_default="false")
+    version:         Mapped[int]                = mapped_column(Integer, default=1, nullable=False, server_default="1")
+    tags:            Mapped[Optional[dict]]     = mapped_column(JSON, nullable=True)
+    file_hash:       Mapped[Optional[str]]      = mapped_column(String(64), nullable=True)
 
     uploader: Mapped["User"]              = relationship("User",   foreign_keys=[uploaded_by], back_populates="documents")
     course:   Mapped[Optional["Course"]]  = relationship("Course", back_populates="documents")

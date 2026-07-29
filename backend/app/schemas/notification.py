@@ -21,6 +21,7 @@ class NotificationResponse(NotificationBase):
     recipient_id: uuid.UUID
     sender_id: Optional[uuid.UUID] = None
     is_read: bool
+    status: str = "unread"
     created_at: datetime
     read_at: Optional[datetime] = None
 

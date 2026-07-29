@@ -69,3 +69,40 @@ async def require_lecture_control_permission(
 
 # Alias for backward compatibility / flexibility
 verify_teacher_permission = require_lecture_control_permission
+
+
+class RequireRole:
+    """
+    FastAPI dependency enforcing that the current user possesses one of the specified allowed roles.
+    Raises HTTP 401 if unauthenticated and HTTP 403 if unauthorized.
+    """
+    def __init__(self, *allowed_roles: str):
+        self.allowed_roles = {r.strip().lower() for r in allowed_roles}
+        # Automatically include Super Admin in admin role checks unless explicitly restricted
+        self.allowed_roles.add("super admin")
+        self.allowed_roles.add("super_admin")
+
+    async def __call__(self, current_user: User = Depends(get_current_user)) -> User:
+        if not current_user or not current_user.role:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required."
+            )
+        
+        user_role_norm = current_user.role.strip().lower()
+        if user_role_norm not in self.allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access forbidden: Role '{current_user.role}' is not authorized for this resource."
+            )
+        return current_user
+
+
+def require_roles(*allowed_roles: str) -> RequireRole:
+    """
+    Convenience constructor for RequireRole dependency.
+    Usage:
+        @router.get("/admin-only", dependencies=[Depends(require_roles("Institute Admin", "Super Admin"))])
+    """
+    return RequireRole(*allowed_roles)
+

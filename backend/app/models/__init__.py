@@ -23,6 +23,8 @@ from app.models.knowledge_base import KnowledgeBaseArticle as KBArticle
 from app.models.fees import FeeStructure, StudentFeeInvoice, FeePayment, InvoiceStatus, PaymentMethod
 from app.models.recording import Recording
 from app.models.otp import EmailOTP
+from app.models.audit import AuditLog
+from app.models.chat import ChatSession, ChatMessage, AIConversation
 
 __all__ = [
     "Base",
@@ -61,5 +63,9 @@ __all__ = [
     "PaymentMethod",
     "Recording",
     "EmailOTP",
+    "AuditLog",
+    "ChatSession",
+    "ChatMessage",
+    "AIConversation",
 ]
 
