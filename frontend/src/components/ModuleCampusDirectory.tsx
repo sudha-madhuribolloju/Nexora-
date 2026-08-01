@@ -58,7 +58,7 @@ export default function ModuleCampusDirectory() {
 
   // Courses Database
   const [courses, setCourses] = useState<Course[]>([
-    { id: "c-1", code: "PHY-401", title: "Advanced Quantum Superposition", department: "Physics", instructor: "Prof. Srinivas B.", subjectsCount: 4, studentsCount: 24 },
+    { id: "c-1", code: "PHY-401", title: "Advanced Quantum Superposition", department: "Physics", instructor: "Prof. Sudha Madhuri", subjectsCount: 4, studentsCount: 24 },
     { id: "c-2", code: "BIO-305", title: "Genetics Lab & CRISPR Splicing", department: "Biology", instructor: "Dr. Sarah Jenkins", subjectsCount: 3, studentsCount: 18 },
     { id: "c-3", code: "ECO-201", title: "Microeconomics Equilibrium Models", department: "Economics", instructor: "Prof. Arthur Pendelton", subjectsCount: 5, studentsCount: 40 },
     { id: "c-4", code: "CS-502", title: "Algorithmic Complexity & Graph Systems", department: "Computer Science", instructor: "Dr. Alan Turing", subjectsCount: 6, studentsCount: 32 }
