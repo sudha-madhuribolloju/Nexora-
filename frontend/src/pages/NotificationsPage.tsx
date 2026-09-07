@@ -27,33 +27,25 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     { 
       id: "1", 
-      title: "Dr. Sarah Jenkins started Live Classroom", 
-      message: "Session topic is Quantum Molecular States. Transcripts are actively synchronized with Google Gemini.",
+      title: "Live Classroom Speech Recognition Ready", 
+      message: "Whisper STT speech recognition engine and Gemini AI NLP pipeline are initialized.",
       time: "Just Now", 
       type: "classroom", 
       read: false 
     },
     { 
       id: "2", 
-      title: "New AI Note compiled for Quantum Dynamics", 
-      message: "A fresh set of concise course files and formulas was synthesized from the recorded lecture audio.",
-      time: "10m ago", 
+      title: "AI Knowledge Base & Document Chat Online", 
+      message: "Upload course textbooks and notes to generate study guides, summaries, and quizzes.",
+      time: "System", 
       type: "success", 
       read: false 
     },
     { 
       id: "3", 
-      title: "NEXORA detected student distraction spike (15%)", 
-      message: "Visual analytics algorithms observed a slight drop in student focus markers during Bohr Model Proof.",
-      time: "25m ago", 
-      type: "warning", 
-      read: true 
-    },
-    { 
-      id: "4", 
-      title: "PostgreSQL pgvector index synchronized", 
-      message: "Academic Search citation database finished embedding 419 new science journals successfully into pgvector.",
-      time: "1h ago", 
+      title: "PostgreSQL Vector Database Connected", 
+      message: "pgvector semantic search is active for academic research papers and study documents.",
+      time: "System", 
       type: "info", 
       read: true 
     },

@@ -115,6 +115,17 @@ export default function AppRoutes() {
         } 
       />
       <Route 
+        path="/nlp-summary/:sessionId" 
+        element={
+          <ProtectedRoutes>
+            <DashboardLayout>
+              <ModuleNLPAndSummary />
+            </DashboardLayout>
+          </ProtectedRoutes>
+        } 
+      />
+
+      <Route 
         path="/ai-chat" 
         element={
           <ProtectedRoutes>

@@ -48,7 +48,7 @@ export default function ModuleCampusDirectory() {
 
   // Users Database
   const [users, setUsers] = useState<UserProfile[]>([
-    { id: "u-1", name: "Prof. Sudha Madhuri", role: "Teacher", email: "srinivasb.mwa@gmail.com", phone: "+1 (555) 019-2231", status: "Active", avatar: "SB", joinedDate: "2024-09-01" },
+    { id: "u-1", name: "Prof. Sudha Madhuri", role: "Teacher", email: "sudha.madhuri@stmary.edu", phone: "+1 (555) 019-2231", status: "Active", avatar: "SB", joinedDate: "2024-09-01" },
     { id: "u-2", name: "Alice Vance", role: "Student", email: "alice.vance@stmary.edu", phone: "+1 (555) 012-9988", status: "Active", avatar: "AV", joinedDate: "2025-01-15" },
     { id: "u-3", name: "Bob Miller", role: "Student", email: "bob.miller@stmary.edu", phone: "+1 (555) 017-4455", status: "Active", avatar: "BM", joinedDate: "2025-01-15" },
     { id: "u-4", name: "Dr. Sarah Jenkins", role: "Teacher", email: "sarah.jenkins@stmary.edu", phone: "+1 (555) 013-1122", status: "Active", avatar: "SJ", joinedDate: "2023-08-20" },

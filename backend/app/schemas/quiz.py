@@ -110,3 +110,24 @@ class QuizResultResponse(BaseModel):
     pass_rate: Optional[float] = None
     highest_score: Optional[float] = None
     lowest_score: Optional[float] = None
+
+
+# ─── AI Quiz Generation ────────────────────────────────────────────────────────
+
+class GenerateQuizRequest(BaseModel):
+    topic: str
+    difficulty: Optional[str] = "Intermediate"
+    questionCount: Optional[int] = 5
+
+
+class QuizQuestionGeneratedItem(BaseModel):
+    id: str
+    question: str
+    options: List[str]
+    correctAnswer: str
+    explanation: str
+
+
+class GenerateQuizResponse(BaseModel):
+    quiz: List[QuizQuestionGeneratedItem]
+

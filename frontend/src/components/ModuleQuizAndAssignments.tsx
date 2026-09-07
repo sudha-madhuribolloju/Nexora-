@@ -22,7 +22,7 @@ export default function ModuleQuizAndAssignments() {
   const [activeTab, setActiveTab] = useState<"quiz" | "assignment">("quiz");
   
   // Quiz states
-  const [quizTopic, setQuizTopic] = useState("Quantum Mechanics");
+  const [quizTopic, setQuizTopic] = useState("");
   const [difficulty, setDifficulty] = useState("Intermediate");
   const [loading, setLoading] = useState(false);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
@@ -33,7 +33,7 @@ export default function ModuleQuizAndAssignments() {
   const [quizCompleted, setQuizCompleted] = useState(false);
 
   // Assignment states
-  const [assignmentTopic, setAssignmentTopic] = useState("Gene Editing Methods");
+  const [assignmentTopic, setAssignmentTopic] = useState("");
   const [assignmentResult, setAssignmentResult] = useState("");
   const [assignmentLoading, setAssignmentLoading] = useState(false);
 
@@ -96,7 +96,7 @@ export default function ModuleQuizAndAssignments() {
     }
   };
 
-  const presetTopics = ["Quantum Superposition", "Artificial Neural Dynamics", "CRISPR-Cas9 Editing", "Macroeconomic Theories"];
+  const presetTopics = ["Artificial Intelligence", "Data Structures & Algorithms", "Linear Algebra", "World History"];
 
   return (
     <div className="space-y-8">

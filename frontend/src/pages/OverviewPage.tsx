@@ -63,18 +63,18 @@ export default function OverviewPage() {
         {currentRole === ROLES.STUDENT && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs text-gray-600 leading-normal text-left">
             <div className="bento-card bento-card-blue p-5 space-y-2">
-              <span className="text-[10px] uppercase font-mono text-gray-400 font-bold">Upcoming Exam Scope</span>
-              <p className="font-bold text-gray-900 text-sm">Quantum Entanglement Basics</p>
+              <span className="text-[10px] uppercase font-mono text-gray-400 font-bold">Interactive Quizzes</span>
+              <p className="font-bold text-gray-900 text-sm">Self-Paced Practice &amp; Review</p>
               <span className="text-blue-600 font-semibold mt-1 block hover:underline cursor-pointer" onClick={() => navigate("/quizzes")}>Take preparatory quiz &gt;</span>
             </div>
             <div className="bento-card bento-card-purple p-5 space-y-2">
-              <span className="text-[10px] uppercase font-mono text-gray-400 font-bold">Course notes</span>
-              <p className="font-bold text-gray-900 text-sm">CRISPR Cell scissors overview</p>
+              <span className="text-[10px] uppercase font-mono text-gray-400 font-bold">Course Notes &amp; Whiteboard</span>
+              <p className="font-bold text-gray-900 text-sm">AI Study Manuals &amp; Diagrams</p>
               <span className="text-blue-600 font-semibold mt-1 block hover:underline cursor-pointer" onClick={() => navigate("/whiteboard")}>Open notes folder &gt;</span>
             </div>
             <div className="bento-card bento-card-emerald p-5 space-y-2">
-              <span className="text-[10px] uppercase font-mono text-gray-400 font-bold">Connected Peers</span>
-              <p className="font-bold text-gray-900 text-sm">NEXORA AI Assistant Peer</p>
+              <span className="text-[10px] uppercase font-mono text-gray-400 font-bold">AI Student Agent</span>
+              <p className="font-bold text-gray-900 text-sm">PDF &amp; Textbook Assistant</p>
               <span className="text-blue-600 font-semibold mt-1 block hover:underline cursor-pointer" onClick={() => navigate("/ai-chat")}>Ask a question &gt;</span>
             </div>
           </div>
@@ -85,7 +85,7 @@ export default function OverviewPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs text-gray-600 leading-normal text-left">
             <div className="bento-card bento-card-purple p-5 space-y-2">
               <span className="text-[10px] uppercase font-mono text-gray-400 font-bold">Classroom Engagement</span>
-              <p className="font-bold text-gray-900 text-sm">Bohr Model Lecture: 92% Focus</p>
+              <p className="font-bold text-gray-900 text-sm">Live Lecture NLP Analytics</p>
               <span className="text-purple-600 font-semibold mt-1 block hover:underline cursor-pointer" onClick={() => navigate("/nlp-summary")}>Open NLP graphs &gt;</span>
             </div>
             <div className="bento-card bento-card-blue p-5 space-y-2">
@@ -94,8 +94,8 @@ export default function OverviewPage() {
               <span className="text-purple-600 font-semibold mt-1 block hover:underline cursor-pointer" onClick={() => navigate("/quizzes")}>Generate new test &gt;</span>
             </div>
             <div className="bento-card bento-card-emerald p-5 space-y-2">
-              <span className="text-[10px] uppercase font-mono text-gray-400 font-bold">Attendance logs</span>
-              <p className="font-bold text-gray-900 text-sm">94.2% Average Attendance</p>
+              <span className="text-[10px] uppercase font-mono text-gray-400 font-bold">Attendance &amp; Performance</span>
+              <p className="font-bold text-gray-900 text-sm">Student Analytics &amp; Roster</p>
               <span className="text-purple-600 font-semibold mt-1 block hover:underline cursor-pointer" onClick={() => navigate("/analytics")}>Inspect enrollment &gt;</span>
             </div>
           </div>
@@ -150,7 +150,7 @@ export default function OverviewPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
           <button
-            onClick={() => navigate("/audio-voice")}
+            onClick={() => navigate("/live-classroom")}
             className="bento-card bento-card-blue text-left hover:border-blue-300 hover:shadow-md transition-all group cursor-pointer space-y-4"
           >
             <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center transition-transform group-hover:scale-105 duration-200">
@@ -158,7 +158,7 @@ export default function OverviewPage() {
             </div>
             <div>
               <span className="text-xs font-bold text-gray-800 block">Record Lectures</span>
-              <span className="text-[10px] text-gray-400 mt-1 block">Capture audio &amp; check voiceprint IDs</span>
+              <span className="text-[10px] text-gray-400 mt-1 block">Live Classroom microphone capture &amp; STT</span>
             </div>
           </button>
 

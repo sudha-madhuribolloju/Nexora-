@@ -12,6 +12,7 @@ from app.services.assignment_service import AssignmentService
 from app.schemas.assignment import (
     AssignmentCreate, AssignmentUpdate, AssignmentResponse, AssignmentListResponse,
     SubmissionCreate, SubmissionGrade, SubmissionResponse, SubmissionListResponse,
+    GenerateAssignmentRequest, GenerateAssignmentResponse
 )
 
 router = APIRouter()
@@ -41,6 +42,18 @@ async def create_assignment(
     Create a new assignment for a course.
     """
     return await AssignmentService.create_assignment(db, data, teacher_id)
+
+
+@router.post("/generate", response_model=GenerateAssignmentResponse, summary="Generate assignment outline & rubric")
+async def generate_assignment_ai(
+    request: GenerateAssignmentRequest
+) -> Any:
+    """
+    Generate an assignment task outline and grading rubric using AI LLM orchestration.
+    """
+    from app.services.ai_service import AIService
+    reply = await AIService.generate_assignment(topic=request.topic)
+    return GenerateAssignmentResponse(reply=reply)
 
 
 @router.get("/{assignment_id}", response_model=AssignmentResponse, summary="Get assignment by ID")

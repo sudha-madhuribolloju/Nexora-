@@ -11,8 +11,8 @@ class RecordingBase(BaseModel):
     subject_id: Optional[uuid.UUID] = None
     filename: str
     duration: float = 0.0
-    file_size: int = 0
-    recording_status: str = "ready"
+    file_size: Optional[int] = 0
+    recording_status: Optional[str] = "ready"
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
     storage_path: str
@@ -35,7 +35,7 @@ class RecordingResponse(RecordingBase):
     id: uuid.UUID
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    is_deleted: bool = False
+    is_deleted: Optional[bool] = False
 
     # Optional UI display annotations
     teacher_name: Optional[str] = None

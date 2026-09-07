@@ -11,7 +11,42 @@ from app.models.user import User
 from app.core.rbac import require_lecture_control_permission, verify_teacher_permission, has_lecture_control_permission, ALLOWED_LECTURE_CONTROL_ROLES
 
 
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
 logger = logging.getLogger(__name__)
+
+optional_bearer = HTTPBearer(auto_error=False)
+
+
+async def get_current_user_optional(
+    db: AsyncSession = Depends(get_db),
+    auth: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer)
+) -> Optional[User]:
+    """
+    Optional authentication dependency. Returns User if valid token present, otherwise None.
+    """
+    if not auth or not auth.credentials:
+        return None
+    try:
+        from app.core.security import decode_access_token
+        from sqlalchemy import select
+        payload = decode_access_token(auth.credentials)
+        if not payload or "sub" not in payload:
+            return None
+        user_id = uuid.UUID(payload["sub"])
+        query = select(User).where(User.id == user_id)
+        result = await db.execute(query)
+        user = result.scalar_one_or_none()
+        if user:
+            return user
+        role_claim = payload.get("role")
+        email_claim = payload.get("email", "user@nexora.school")
+        if role_claim:
+            return User(id=user_id, role=role_claim, email=email_claim, is_active=True, is_verified=True)
+    except Exception:
+        return None
+    return None
+
 
 class RoleChecker:
     """

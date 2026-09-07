@@ -23,24 +23,20 @@ export default function ModuleNotesAndWhiteboard() {
   const [activeTab, setActiveTab] = useState<"notes" | "whiteboard">("notes");
   
   // Notes generator state
-  const [notesTopic, setNotesTopic] = useState("Quantum Superposition");
-  const [subject, setSubject] = useState("Theoretical Physics");
+  const [notesTopic, setNotesTopic] = useState("");
+  const [subject, setSubject] = useState("");
   const [notesResult, setNotesResult] = useState("");
   const [notesLoading, setNotesLoading] = useState(false);
 
   // Whiteboard state
-  const [elements, setElements] = useState<WhiteboardElement[]>([
-    { id: "1", type: "circle", x: 150, y: 120, color: "#2563EB", text: "Neural Node X" },
-    { id: "2", type: "rect", x: 320, y: 100, width: 120, height: 60, color: "#7C3AED", text: "Activation f(x)" },
-    { id: "3", type: "line", x: 230, y: 130, color: "#38BDF8" },
-    { id: "4", type: "text", x: 210, y: 80, color: "#111827", text: "Weights: W1" }
-  ]);
+  const [elements, setElements] = useState<WhiteboardElement[]>([]);
   const [elementText, setElementText] = useState("");
   const [elementType, setElementType] = useState<"text" | "rect" | "circle">("circle");
   const [whiteboardAnalysis, setWhiteboardAnalysis] = useState("");
   const [whiteboardLoading, setWhiteboardLoading] = useState(false);
 
   const handleGenerateNotes = async () => {
+    if (!notesTopic.trim()) return;
     setNotesLoading(true);
     setNotesResult("");
     try {
@@ -100,9 +96,9 @@ export default function ModuleNotesAndWhiteboard() {
   };
 
   const presetNotesTopics = [
-    { topic: "Quantum Superposition", subject: "Quantum Physics" },
-    { topic: "CRISPR-Cas9 Mechanism", subject: "Molecular Biology" },
-    { topic: "Neural Transformer Networks", subject: "Computer Science" }
+    { topic: "Artificial Neural Networks", subject: "Computer Science" },
+    { topic: "Cellular Mitosis & Meiosis", subject: "Biology" },
+    { topic: "Newtonian Classical Mechanics", subject: "Physics" }
   ];
 
   return (

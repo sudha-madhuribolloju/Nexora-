@@ -5,13 +5,16 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_ai_chat_endpoint_unauthorized() -> None:
+def test_ai_chat_endpoint_unauthenticated() -> None:
     """
-    Test POST /api/v1/ai/chat returns 401 when token is missing.
+    Test POST /api/v1/ai/chat returns 200 OK for unauthenticated/guest users.
     """
     payload = {"message": "Hello Nexora AI", "stream": False}
     response = client.post("/api/v1/ai/chat", json=payload)
-    assert response.status_code == 401
+    assert response.status_code == 200
+    data = response.json()
+    assert "response" in data or "reply" in data
+
 
 
 def test_ai_chat_endpoint_success() -> None:
@@ -66,3 +69,98 @@ def test_ai_chat_endpoint_success() -> None:
     assert followup_resp.status_code == 200, followup_resp.text
     followup_data = followup_resp.json()
     assert followup_data["conversation_id"] == conversation_id
+
+
+def test_voice_processing_endpoint_success() -> None:
+    """
+    Test POST /api/v1/ai/voice-processing returns 200 and valid VoiceProcessingResponse structure.
+    """
+    payload = {"speakerName": "Dr. Sarah Jenkins"}
+    response = client.post("/api/v1/ai/voice-processing", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["speaker"] == "Dr. Sarah Jenkins"
+    assert "voicePrintId" in data
+    assert "confidence" in data
+    assert "clarityScore" in data
+    assert "noiseReducedTranscript" in data
+
+
+def test_summarize_endpoint_success() -> None:
+    """
+    Test POST /api/v1/ai/summarize returns 200 and valid Summary response.
+    """
+    payload = {"transcript": "Today we are discussing quantum mechanics and entanglement."}
+    response = client.post("/api/v1/ai/summarize", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "summary" in data
+    assert len(data["summary"]) > 0
+
+
+def test_nlp_endpoint_success() -> None:
+    """
+    Test POST /api/v1/ai/nlp returns 200 and valid NLPResponse structure.
+    """
+    payload = {"transcript": "CRISPR-Cas9 acts as molecular scissors using guide RNA to edit target genes."}
+    response = client.post("/api/v1/ai/nlp", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "sentiment" in data
+    assert "topics" in data
+    assert "definitions" in data
+    assert "actionItems" in data
+
+
+def test_research_endpoint_success() -> None:
+    """
+    Test POST /api/v1/ai/research returns 200 and valid ResearchResponse structure.
+    """
+    payload = {"query": "Quantum entanglement in distributed computing"}
+    response = client.post("/api/v1/ai/research", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "findings" in data
+    assert "citations" in data
+    assert isinstance(data["citations"], list)
+
+
+def test_notes_endpoint_success() -> None:
+    """
+    Test POST /api/v1/ai/notes returns 200 and valid NotesResponse structure.
+    """
+    payload = {"topic": "Demand-pull Inflation", "subject": "Economics"}
+    response = client.post("/api/v1/ai/notes", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "notes" in data
+    assert len(data["notes"]) > 0
+
+
+def test_generate_quiz_endpoint_success() -> None:
+    """
+    Test POST /api/v1/quizzes/generate returns 200 and valid Quiz list.
+    """
+    payload = {"topic": "Quantum Mechanics", "difficulty": "Intermediate", "questionCount": 5}
+    response = client.post("/api/v1/quizzes/generate", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "quiz" in data
+    assert len(data["quiz"]) > 0
+    assert "question" in data["quiz"][0]
+    assert "options" in data["quiz"][0]
+
+
+def test_generate_assignment_endpoint_success() -> None:
+    """
+    Test POST /api/v1/assignments/generate returns 200 and valid reply text.
+    """
+    payload = {"topic": "CRISPR-Cas9 Editing"}
+    response = client.post("/api/v1/assignments/generate", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "reply" in data
+    assert len(data["reply"]) > 0
+
+
+

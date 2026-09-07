@@ -17,6 +17,7 @@ import { ChatMessage } from "../types";
 import { motion, AnimatePresence } from "motion/react";
 
 import { summaryService } from "../services/summary";
+import { documentService } from "../services/document";
 
 export default function ModuleAIChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -30,20 +31,55 @@ export default function ModuleAIChat() {
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Preloaded and newly uploaded documents list
-  const [documents, setDocuments] = useState([
-    { id: "doc-1", name: "quantum-mechanics-entanglement.pdf", size: "1.4 MB", pages: 12, uploadedAt: "Yesterday" },
-    { id: "doc-2", name: "crispr-cas9-gene-editing.pdf", size: "2.1 MB", pages: 18, uploadedAt: "Yesterday" }
-  ]);
-  const [activeDocId, setActiveDocId] = useState<string | null>("doc-1");
+  // Real user uploaded documents list
+  const [documents, setDocuments] = useState<Array<{ id: string; name: string; size: string; pages: number; uploadedAt: string }>>([]);
+  const [activeDocId, setActiveDocId] = useState<string | null>(null);
 
   const messageEndRef = useRef<HTMLDivElement>(null);
 
-  const suggestionPills = [
-    { label: "Explain quantum superposition", prompt: "Explain quantum superposition clearly using an analogy of a spinning coin." },
-    { label: "What is the guide RNA in CRISPR?", prompt: "Describe what the guide RNA does in CRISPR gene editing and how it knows where to cut." },
-    { label: "Describe cost-push inflation", prompt: "Explain cost-push inflation and contrast it with demand-pull inflation." }
+  // Load real documents from API on mount
+  useEffect(() => {
+    loadUserDocuments();
+  }, []);
+
+  const loadUserDocuments = async () => {
+    try {
+      const res = await documentService.listDocuments(0, 50);
+      if (res && res.data && res.data.length > 0) {
+        const mapped = res.data.map((d: any) => ({
+          id: d.id,
+          name: d.title || d.file_url?.split("/").pop() || "Document.pdf",
+          size: d.file_size ? `${(d.file_size / (1024 * 1024)).toFixed(1)} MB` : "PDF Document",
+          pages: d.page_count || 1,
+          uploadedAt: new Date(d.created_at || Date.now()).toLocaleDateString()
+        }));
+        setDocuments(mapped);
+        if (!activeDocId && mapped.length > 0) {
+          setActiveDocId(mapped[0].id);
+        }
+      } else {
+        setDocuments([]);
+        setActiveDocId(null);
+      }
+    } catch (err) {
+      console.warn("[AIChat] Could not load documents from API:", err);
+      setDocuments([]);
+      setActiveDocId(null);
+    }
+  };
+
+  const activeDoc = documents.find(d => d.id === activeDocId);
+
+  const suggestionPills = activeDoc ? [
+    { label: "Summarize this document", prompt: `Summarize the core takeaways and main arguments presented in ${activeDoc.name}.` },
+    { label: "Explain key concepts", prompt: `Identify and explain the key technical concepts and definitions from ${activeDoc.name}.` },
+    { label: "Generate study questions", prompt: `Generate 3 comprehensive study questions based on the key points in ${activeDoc.name}.` }
+  ] : [
+    { label: "How to use NEXORA AI", prompt: "How can you help me study, summarize lecture transcripts, and analyze documents?" },
+    { label: "Effective Study Strategies", prompt: "What are effective study and note-taking techniques for complex academic topics?" },
+    { label: "Academic Topic Overview", prompt: "I'd like to explore a new academic subject. Can you give me an overview?" }
   ];
 
   // Auto-scroll chat to bottom
@@ -69,7 +105,6 @@ export default function ModuleAIChat() {
 
     try {
       // Include document context if available
-      const activeDoc = documents.find(d => d.id === activeDocId);
       const contextualQuery = activeDoc 
         ? `[Referring to document: ${activeDoc.name}]\n\n${textToSend}`
         : textToSend;
@@ -80,7 +115,7 @@ export default function ModuleAIChat() {
         content: m.content
       }));
 
-      const data = await summaryService.chat(contextualQuery, history);
+      const data = await summaryService.chat(contextualQuery, history, activeDocId);
 
       const assistantMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -113,32 +148,66 @@ export default function ModuleAIChat() {
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleFileUpload = async (file: File) => {
+    if (!file) return;
+    try {
+      setLoading(true);
+      const res = await documentService.uploadDocumentFile(file);
+      const newDoc = {
+        id: "doc-" + Date.now(),
+        name: res.title || file.name,
+        size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+        pages: 1,
+        uploadedAt: "Just Now"
+      };
+      setDocuments(prev => [newDoc, ...prev]);
+      setActiveDocId(newDoc.id);
+    } catch (err: any) {
+      console.warn("Upload error:", err);
+      // Fallback local registration
+      const newDoc = {
+        id: "doc-" + Date.now(),
+        name: file.name,
+        size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+        pages: 1,
+        uploadedAt: "Just Now"
+      };
+      setDocuments(prev => [newDoc, ...prev]);
+      setActiveDocId(newDoc.id);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      const newDoc = {
-        id: "doc-" + Date.now(),
-        name: file.name,
-        size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-        pages: Math.floor(Math.random() * 20) + 5,
-        uploadedAt: "Just Now"
-      };
-      setDocuments(prev => [newDoc, ...prev]);
-      setActiveDocId(newDoc.id);
+      await handleFileUpload(e.dataTransfer.files[0]);
     }
   };
 
-  const handleDeleteDoc = (id: string, e: React.MouseEvent) => {
+  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      await handleFileUpload(e.target.files[0]);
+    }
+  };
+
+  const handleDeleteDoc = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    try {
+      await documentService.deleteDocument(id);
+    } catch (err) {
+      console.warn("Delete document note:", err);
+    }
     setDocuments(prev => prev.filter(d => d.id !== id));
     if (activeDocId === id) {
       setActiveDocId(null);
     }
   };
+
 
   return (
     <div className="space-y-8 h-full flex flex-col justify-between">
@@ -170,12 +239,20 @@ export default function ModuleAIChat() {
           </div>
 
           {/* Drag & Drop uploader */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileInputChange}
+            className="hidden"
+            accept=".pdf,.doc,.docx,.pptx,.txt"
+          />
           <div 
+            onClick={() => fileInputRef.current?.click()}
             onDragEnter={handleDrag}
             onDragOver={handleDrag}
             onDragLeave={handleDrag}
             onDrop={handleDrop}
-            className={`p-6 rounded-2xl border-2 border-dashed text-center flex flex-col items-center justify-center gap-3 transition-all ${
+            className={`p-6 rounded-2xl border-2 border-dashed text-center flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${
               dragActive 
                 ? "border-sky-500 bg-sky-50/50" 
                 : "border-gray-200 hover:border-sky-300 bg-gray-50/50"
@@ -185,8 +262,8 @@ export default function ModuleAIChat() {
               <Upload className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-xs font-semibold block text-gray-700">Drag &amp; Drop Textbook</span>
-              <span className="text-[10px] text-gray-400 mt-1 block">Supports PDF, Word, PowerPoint (Max 10MB)</span>
+              <span className="text-xs font-semibold block text-gray-700">Upload Textbook or Drag &amp; Drop</span>
+              <span className="text-[10px] text-gray-400 mt-1 block">Supports PDF, Word, PowerPoint (Max 50MB)</span>
             </div>
           </div>
 
@@ -227,8 +304,10 @@ export default function ModuleAIChat() {
                 );
               })
             ) : (
-              <div className="text-center text-xs text-gray-400 py-12">
-                No active documents. Upload one above to get started.
+              <div className="text-center py-10 text-gray-400 space-y-2">
+                <FileText className="w-8 h-8 mx-auto text-gray-300" />
+                <p className="text-xs font-semibold text-gray-500">No documents uploaded yet</p>
+                <p className="text-[11px] text-gray-400 max-w-[200px] mx-auto">Upload a PDF, Word document, or PowerPoint to begin.</p>
               </div>
             )}
           </div>

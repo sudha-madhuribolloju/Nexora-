@@ -81,3 +81,14 @@ class SubmissionListResponse(BaseModel):
     skip: int
     limit: int
     data: List[SubmissionResponse]
+
+
+# ─── AI Assignment Generation ──────────────────────────────────────────────────
+
+class GenerateAssignmentRequest(BaseModel):
+    topic: str
+
+
+class GenerateAssignmentResponse(BaseModel):
+    reply: str
+

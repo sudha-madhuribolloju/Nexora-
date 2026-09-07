@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.models.document_chunk import DocumentChunk
-from app.services.chat_service import ChatService
+from app.services.ai_service import AIService
 
 logger = logging.getLogger("app.services.lecture_summary_service")
 
@@ -43,19 +43,7 @@ class LectureSummaryService:
                 "topics_covered": []
             }
 
-        prompt = (
-            "You are an expert academic professor and curriculum assistant. "
-            "Synthesize and summarize the following lecture transcript/notes into a clear, high-level summary.\n\n"
-            "Include:\n"
-            "1. Concise Executive Summary\n"
-            "2. Key Takeaways (Bullet points)\n"
-            "3. Core Topics Covered\n"
-            "4. Follow-up Study Questions\n\n"
-            f"Lecture Content:\n{content_to_summarize[:12000]}\n\n"
-            "Summary Output:"
-        )
-
-        summary_response = await ChatService.generate_chat_response(prompt)
+        summary_response = await AIService.summarize(transcript=content_to_summarize)
 
         return {
             "document_id": str(document_id) if document_id else None,

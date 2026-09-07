@@ -25,6 +25,7 @@ from app.models.recording import Recording
 from app.models.otp import EmailOTP
 from app.models.audit import AuditLog
 from app.models.chat import ChatSession, ChatMessage, AIConversation
+from app.models.transcript import LectureSession, Transcript, LectureSummary
 
 __all__ = [
     "Base",
@@ -67,5 +68,8 @@ __all__ = [
     "ChatSession",
     "ChatMessage",
     "AIConversation",
+    "LectureSession",
+    "Transcript",
+    "LectureSummary",
 ]
 

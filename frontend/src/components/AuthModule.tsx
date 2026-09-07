@@ -113,9 +113,9 @@ export default function AuthModule({
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "srinivasb.mwa@gmail.com",
-      password: "••••••••••••",
-      rememberMe: true
+      email: "",
+      password: "",
+      rememberMe: false
     }
   });
 
@@ -166,10 +166,10 @@ export default function AuthModule({
   } = useForm<CompleteProfileInput>({
     resolver: zodResolver(completeProfileSchema),
     defaultValues: {
-      fullName: "Prof. Sudha Madhuri",
-      role: "Teacher",
-      bio: "Course Instructor of Theoretical Quantum Physics and molecular genetics.",
-      phone: "+1 (555) 019-2231"
+      fullName: "",
+      role: "Student",
+      bio: "",
+      phone: ""
     }
   });
 
@@ -181,8 +181,8 @@ export default function AuthModule({
     await new Promise((resolve) => setTimeout(resolve, 1500));
     setIsLoading(false);
 
-    // Validate credentials or accept default sandbox values
-    if (data.email === "srinivasb.mwa@gmail.com" || data.email.includes("@")) {
+    // Validate credentials — accept any well-formed email for sandbox simulation
+    if (data.email.includes("@")) {
       triggerToast("Welcome back to NEXORA!", "success");
       onLoginSuccess({
         email: data.email,
@@ -426,7 +426,7 @@ export default function AuthModule({
                       <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400" />
                       <input
                         type="email"
-                        placeholder="srinivasb.mwa@gmail.com"
+                        placeholder="you@example.com"
                         className={`w-full pl-10 pr-4 py-3 text-xs rounded-xl border bg-white focus:outline-none transition-all ${loginErrors.email ? "border-red-400 focus:border-red-500" : "border-gray-200 focus:border-blue-600"
                           }`}
                         {...loginRegister("email")}
@@ -752,7 +752,7 @@ export default function AuthModule({
                       <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400" />
                       <input
                         type="email"
-                        placeholder="srinivasb.mwa@gmail.com"
+                        placeholder="you@example.com"
                         className={`w-full pl-10 pr-4 py-3 text-xs rounded-xl border bg-white focus:outline-none transition-all ${forgotErrors.email ? "border-red-400 focus:border-red-500" : "border-gray-200 focus:border-blue-600"
                           }`}
                         {...forgotRegister("email")}
@@ -907,7 +907,7 @@ export default function AuthModule({
                 <div className="space-y-1.5">
                   <h2 className="font-display text-2xl font-bold tracking-tight text-gray-900">Verify Email</h2>
                   <p className="text-xs text-gray-500">
-                    Provide the 6-digit verification code dispatched to your institutional records: <span className="font-mono text-blue-600 font-bold">{tempEmail || "srinivasb.mwa@gmail.com"}</span>
+                    Provide the 6-digit verification code dispatched to your institutional records: <span className="font-mono text-blue-600 font-bold">{tempEmail || "your registered email"}</span>
                   </p>
                 </div>
 

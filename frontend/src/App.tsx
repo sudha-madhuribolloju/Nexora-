@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter } from "react-router-dom";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { ClassroomProvider } from "./contexts/ClassroomContext";
 import AppRoutes from "./routes";
 import { CheckCircle, AlertCircle, Info } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -44,10 +45,13 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
+        <ClassroomProvider>
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
+        </ClassroomProvider>
       </AuthProvider>
     </ThemeProvider>
   );
 }
+

@@ -103,3 +103,25 @@ async def end_session(
     Mark an active session as completed (ended). Only Teachers/Admins can end sessions.
     """
     return await SessionService.end_session(db, session_id)
+
+
+@router.get("/{session_id}/transcript", summary="Get session transcript by ID")
+async def get_session_transcript(
+    session_id: str,
+    _: User = Depends(get_current_user),
+) -> Any:
+    """
+    Get the speech-to-text transcript recorded for this class session.
+    """
+    from app.services.session_store import session_store
+    sess = session_store.get_session(session_id)
+    if not sess and session_id != "default":
+        sess = session_store.get_session("default")
+
+    transcript_val = sess.transcript if sess else ""
+    return {
+        "session_id": session_id,
+        "transcript": transcript_val,
+        "status": "completed" if transcript_val else "not_available"
+    }
+

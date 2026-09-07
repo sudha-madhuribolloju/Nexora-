@@ -95,7 +95,28 @@ async def get_teachers(
     skip: int = 0,
     limit: int = 100
 ) -> Any:
-    return format_response(status="success", message="Get teachers list", data={"teachers": []})
+    try:
+        result = await db.execute(
+            select(User).where(User.is_deleted == False)
+        )
+        all_users = result.scalars().all()
+        teachers = [
+            {
+                "id": str(u.id),
+                "email": u.email,
+                "first_name": u.first_name,
+                "last_name": u.last_name,
+                "fullName": f"{u.first_name or ''} {u.last_name or ''}".strip() or u.email,
+                "role": u.role,
+                "department": getattr(u, "department", "General Academics"),
+                "voice_print_id": getattr(u, "voice_print_id", "Not registered")
+            }
+            for u in all_users if u.role and ("teacher" in u.role.lower() or "admin" in u.role.lower())
+        ]
+        return format_response(status="success", message="Get teachers list", data={"teachers": teachers})
+    except Exception as e:
+        logger.warning(f"Notice querying teachers: {e}")
+        return format_response(status="success", message="Get teachers list", data={"teachers": []})
 
 
 @router.get("/{teacher_id}", response_model=Any)

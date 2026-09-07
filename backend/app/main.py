@@ -39,18 +39,26 @@ app = FastAPI(
 origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    # Vite dev server default port
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    # Common alternate dev ports
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
 ]
-# Configure CORS Middleware
-if settings.cors_origins:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
 
-# Middleware: Security Headers & HTTPS Readiness
+# Configure CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Middleware: Security Headers, WebSocket CSP, & HTTPS Readiness
+# NOTE: Only ONE middleware is defined here (the duplicate was removed — it was
+# overwriting Content-Security-Policy and stripping ws:/wss: which broke WebSocket).
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
     response = await call_next(request)
@@ -58,45 +66,40 @@ async def security_headers_middleware(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-        "img-src 'self' data: https://fastapi.tiangolo.com; "
-        "font-src 'self' https://cdn.jsdelivr.net; "
-        "connect-src 'self' ws: wss:;"
-    )
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    return response
-
-# Middleware: Request timing / debug logging
-@app.middleware("http")     
-async def security_headers_middleware(request: Request, call_next):
-    response = await call_next(request) 
-
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
-    # Skip CSP for Swagger during development
-    if request.url.path not in ["/docs", "/openapi.json", "/redoc"]:
+    # Skip restrictive CSP for Swagger UI routes; allow ws:/wss: for WebSocket everywhere else
+    if request.url.path in ["/docs", "/openapi.json", "/redoc"]:
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self'; "
-            "style-src 'self'; "
-            "img-src 'self' data:; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "img-src 'self' data: https://fastapi.tiangolo.com; "
+            "font-src 'self' https://cdn.jsdelivr.net; "
+            "connect-src 'self' ws: wss:;"
         )
-
+    else:
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; "
+            # CRITICAL: ws: wss: must be here — without it browsers block WebSocket connections
+            "connect-src 'self' ws: wss:;"
+        )
     return response
 
 # Global Exception Handler: HTTP exceptions
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     logger.warning(f"HTTPException: {exc.status_code} - {exc.detail}")
+    headers = dict(exc.headers) if exc.headers else {}
+    origin = request.headers.get("origin") or "*"
+    headers["Access-Control-Allow-Origin"] = origin
+    headers["Access-Control-Allow-Credentials"] = "true"
     return JSONResponse(
         status_code=exc.status_code,
+        headers=headers,
         content={
             "status": "error",
             "message": exc.detail,
@@ -110,8 +113,13 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     logger.warning(f"Validation Error: {exc.errors()}")
+    origin = request.headers.get("origin") or "*"
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        headers={
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true"
+        },
         content={
             "status": "error",
             "message": "Validation error in request payload",
@@ -123,8 +131,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled Exception: {str(exc)}", exc_info=True)
+    origin = request.headers.get("origin") or "*"
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        headers={
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true"
+        },
         content={
             "status": "error",
             "message": "An unexpected error occurred on the server.",

@@ -13,6 +13,7 @@ from app.schemas.quiz import (
     QuizCreate, QuizUpdate, QuizResponse, QuizListResponse,
     QuizQuestionCreate, QuizQuestionResponse,
     QuizAttemptResponse, QuizAttemptSubmit, QuizResultResponse,
+    GenerateQuizRequest, GenerateQuizResponse
 )
 
 router = APIRouter()
@@ -42,6 +43,22 @@ async def create_quiz(
     Create a new quiz for a course.
     """
     return await QuizService.create_quiz(db, data, teacher_id)
+
+
+@router.post("/generate", response_model=GenerateQuizResponse, summary="Generate interactive staged quiz")
+async def generate_quiz_ai(
+    request: GenerateQuizRequest
+) -> Any:
+    """
+    Generate an interactive multiple-choice quiz using AI LLM orchestration.
+    """
+    from app.services.ai_service import AIService
+    quiz_questions = await AIService.generate_quiz(
+        topic=request.topic,
+        difficulty=request.difficulty or "Intermediate",
+        question_count=request.questionCount or 5
+    )
+    return GenerateQuizResponse(quiz=quiz_questions)
 
 
 @router.get("/{quiz_id}", response_model=QuizResponse, summary="Get quiz by ID")

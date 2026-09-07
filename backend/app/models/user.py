@@ -187,5 +187,15 @@ class User(TimestampMixin, SoftDeleteMixin, Base):
         parts = filter(None, [self.first_name, self.last_name])
         return " ".join(parts) or self.email
 
+    @full_name.setter
+    def full_name(self, val: Optional[str]) -> None:
+        if val:
+            parts = val.strip().split(" ", 1)
+            self.first_name = parts[0]
+            self.last_name = parts[1] if len(parts) > 1 else ""
+        else:
+            self.first_name = None
+            self.last_name = None
+
     def __repr__(self) -> str:  # pragma: no cover
         return f"<User id={self.id} email={self.email!r} role={self.role!r}>"

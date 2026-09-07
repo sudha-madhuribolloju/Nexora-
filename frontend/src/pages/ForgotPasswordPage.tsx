@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
               <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400" />
               <input
                 type="email"
-                placeholder="srinivasb.mwa@gmail.com"
+                placeholder="you@example.com"
                 className={`w-full pl-10 pr-4 py-3 text-xs rounded-xl border bg-white focus:outline-none transition-all ${errors.email ? "border-red-400 focus:border-red-500" : "border-gray-200 focus:border-blue-600"
                   }`}
                 {...register("email")}

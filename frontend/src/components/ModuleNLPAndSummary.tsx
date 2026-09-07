@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { 
   Sparkles, 
   FileText, 
@@ -10,50 +11,190 @@ import {
   Bookmark,
   TrendingUp,
   RotateCcw,
-  BookMarked
+  BookMarked,
+  Radio,
+  Download,
+  AlertCircle
 } from "lucide-react";
 import { NLPAnalysis } from "../types";
 import { motion } from "motion/react";
 import { summaryService } from "../services/summary";
+import { useClassroomSession } from "../contexts/ClassroomContext";
 
 export default function ModuleNLPAndSummary() {
+  const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
+  const { activeSession, updateSession } = useClassroomSession();
   const [activeTab, setActiveTab] = useState<"summary" | "nlp">("summary");
   const [transcriptText, setTranscriptText] = useState("");
+  const [transcriptStatus, setTranscriptStatus] = useState<"LOADING" | "READY" | "NO_TRANSCRIPT" | "ERROR">("LOADING");
   const [customPrompt, setCustomPrompt] = useState("");
   const [summaryResult, setSummaryResult] = useState<string>("");
   const [nlpResult, setNlpResult] = useState<NLPAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const samples = [
-    {
-      title: "Lecture: Quantum Mechanics & Entanglement",
-      text: "Alright class, today we are delving into quantum mechanics. Let's start with Einstein's famous phrase 'spooky action at a distance', which describes quantum entanglement. When two particles are entangled, their spin states are tied together. If you measure one entangled electron to have spin up, the other instantly collapses into spin down, regardless of whether they are separated by one millimeter or ten light years. This is the bedrock of quantum computing. Your assignment due next Wednesday is to solve the tensor calculations on quantum state vectors in Chapter 4."
-    },
-    {
-      title: "Lecture: Biology & CRISPR Gene Editing",
-      text: "Today we will analyze CRISPR-Cas9, which revolutionized molecular biology. Cas9 is essentially an enzyme that act as molecular scissors, capable of cutting strands of DNA. But how does it know where to cut? It relies on a guide RNA, or gRNA, which is a pre-designed sequence of RNA that matches the targeted genome section exactly. Once matched, Cas9 snipps the DNA, enabling cellular repair mechanisms to insert or disable genes. The major action item is to read the 2012 landmark paper by Doudna and Charpentier before Friday's lab session."
-    },
-    {
-      title: "Lecture: Economics & Inflation Theory",
-      text: "In macroeconomics today, we focus on demand-pull inflation versus cost-push inflation. Demand-pull inflation occurs when aggregate demand for goods and services outstrips aggregate supply—classic 'too much money chasing too few goods'. Cost-push inflation, on the other hand, is driven by an aggregate decrease in supply, usually caused by rising costs of raw materials or wages. Remember, the Consumer Price Index (CPI) tracks this basket of goods over time. Please review the Federal Reserve's recent meeting minutes for next week's discussion."
+  // Auto-sync active or finalized session transcript, summary, and NLP data from PostgreSQL
+  const loadSessionData = async () => {
+    const targetSessionId = routeSessionId || activeSession?.id;
+    if (!targetSessionId) {
+      setTranscriptText("");
+      setSummaryResult("");
+      setNlpResult(null);
+      setTranscriptStatus("NO_TRANSCRIPT");
+      return;
     }
-  ];
 
-  const handleApplySample = (text: string) => {
-    setTranscriptText(text);
+    console.log(`[SESSION] ACTIVE_SESSION_ID=${targetSessionId}`);
+    console.log(`[NLP] FETCHING TRANSCRIPT`);
+    console.log(`[NLP] session_id=${targetSessionId}`);
+    console.log(`[TRANSCRIPT] FETCH_SESSION_ID=${targetSessionId}`);
+    console.log(`[SUMMARY] SOURCE_SESSION_ID=${targetSessionId}`);
+    console.log(`[NLP] Selected session: ${targetSessionId}`);
+
+    // Clear stale states immediately before fetching so old lecture data is never displayed
+    setTranscriptText("");
     setSummaryResult("");
     setNlpResult(null);
+    setTranscriptStatus("LOADING");
+    setFetchError(null);
+
+    // 1. Initial sync from activeSession context ONLY if session IDs strictly match
+    if (activeSession && activeSession.id === targetSessionId) {
+      if (activeSession.transcript && activeSession.transcript.trim()) {
+        setTranscriptText(activeSession.transcript);
+        setTranscriptStatus("READY");
+      }
+      if (activeSession.summary) {
+        const summaryStr = typeof activeSession.summary === "string" 
+          ? activeSession.summary 
+          : activeSession.summary.summary || "";
+        setSummaryResult(summaryStr);
+      }
+      if (activeSession.nlp) {
+        setNlpResult(activeSession.nlp);
+      }
+    }
+
+    // 2. Fetch authoritative session data from backend PostgreSQL API
+    try {
+      const backendData = await summaryService.getSessionData(targetSessionId);
+      console.log(`[NLP] Transcript API status: 200`);
+
+      // Data Integrity Check: verify returned session matches requested session
+      if (backendData && backendData.session_id && backendData.session_id !== targetSessionId) {
+        console.error(`[DATA_INTEGRITY_ERROR] expected_session=${targetSessionId} received_session=${backendData.session_id}`);
+        setTranscriptStatus("ERROR");
+        setFetchError("Transcript session mismatch. Please reload the current lecture.");
+        return;
+      }
+      console.log("[DATA_INTEGRITY] PASS");
+
+      if (backendData && backendData.status === "success") {
+        if (backendData.transcript && backendData.transcript.trim()) {
+          const lines = backendData.transcript.split("\n").filter((l: string) => l.trim());
+          console.log(`[NLP] Transcript records returned: ${lines.length}`);
+          console.log(`[NLP] Transcript loaded successfully`);
+          setTranscriptText(backendData.transcript);
+          setTranscriptStatus("READY");
+          
+          if (updateSession) {
+            updateSession({ transcript: backendData.transcript });
+          }
+        } else if (activeSession && activeSession.id === targetSessionId && activeSession.transcript && activeSession.transcript.trim()) {
+          setTranscriptText(activeSession.transcript);
+          setTranscriptStatus("READY");
+          console.log(`[NLP] Transcript loaded from active session state`);
+        } else {
+          console.log(`[NLP] No transcript available for session: ${targetSessionId}`);
+          setTranscriptText("");
+          setTranscriptStatus("NO_TRANSCRIPT");
+        }
+
+        if (backendData.summary) {
+          const bSum = typeof backendData.summary === "string" 
+            ? backendData.summary 
+            : backendData.summary.summary || "";
+          setSummaryResult(bSum);
+        }
+
+        if (backendData.nlp && backendData.nlp.topics && backendData.nlp.topics.length > 0) {
+          setNlpResult(backendData.nlp);
+        }
+      } else if (backendData && backendData.status === "not_found") {
+        if (activeSession && activeSession.id === targetSessionId && activeSession.transcript && activeSession.transcript.trim()) {
+          setTranscriptText(activeSession.transcript);
+          setTranscriptStatus("READY");
+        } else {
+          setTranscriptText("");
+          setTranscriptStatus("NO_TRANSCRIPT");
+        }
+      }
+    } catch (e: any) {
+      console.error("[ModuleNLPAndSummary] Session sync error:", e);
+      if (activeSession && activeSession.id === targetSessionId && activeSession.transcript && activeSession.transcript.trim()) {
+        setTranscriptText(activeSession.transcript);
+        setTranscriptStatus("READY");
+      } else {
+        setTranscriptStatus("ERROR");
+        setFetchError(e.message || "Unable to load lecture transcript. Please verify connection and retry.");
+      }
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    loadSessionData();
+    return () => {
+      isMounted = false;
+    };
+  }, [routeSessionId, activeSession?.id]);
+
+  const handleImportSessionTranscript = () => {
+    if (activeSession?.transcript) {
+      setTranscriptText(activeSession.transcript);
+      setTranscriptStatus("READY");
+      if (activeSession.summary) {
+        const summaryStr = typeof activeSession.summary === "string" 
+          ? activeSession.summary 
+          : activeSession.summary.summary || "";
+        setSummaryResult(summaryStr);
+      }
+      if (activeSession.nlp) {
+        setNlpResult(activeSession.nlp);
+      }
+      setApiError(null);
+      setFetchError(null);
+    }
+  };
+
+  const handleClear = () => {
+    setTranscriptText("");
+    setSummaryResult("");
+    setNlpResult(null);
+    setApiError(null);
+    setFetchError(null);
+    setTranscriptStatus("NO_TRANSCRIPT");
   };
 
   const handleGenerateSummary = async () => {
     if (!transcriptText.trim()) return;
+    const targetSessionId = routeSessionId || activeSession?.id || "unknown";
+    console.log(`[SUMMARY] SOURCE_SESSION_ID=${targetSessionId}`);
     setLoading(true);
     setSummaryResult("");
+    setApiError(null);
     try {
       const data = await summaryService.generateSummary(transcriptText, customPrompt);
+      console.log(`[SUMMARY] GENERATED session_id=${targetSessionId}`);
       setSummaryResult(data.summary);
+      if (updateSession) {
+        updateSession({ summary: { summary: data.summary, status: "completed" } });
+      }
     } catch (err: any) {
-      setSummaryResult(`Error generating summary: ${err.message}`);
+      const errorMsg = err.message || "Failed to generate summary from transcript.";
+      setApiError(errorMsg);
+      setSummaryResult(`Error generating summary: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -63,15 +204,21 @@ export default function ModuleNLPAndSummary() {
     if (!transcriptText.trim()) return;
     setLoading(true);
     setNlpResult(null);
+    setApiError(null);
     try {
       const data = await summaryService.analyzeNLP(transcriptText);
       setNlpResult(data);
+      if (updateSession) {
+        updateSession({ nlp: data });
+      }
     } catch (err: any) {
-      alert(`Error analyzing NLP data: ${err.message}`);
+      const errorMsg = err.message || "Failed to analyze NLP data.";
+      setApiError(errorMsg);
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="space-y-8">
@@ -89,9 +236,42 @@ export default function ModuleNLPAndSummary() {
           </div>
         </div>
         <p className="text-gray-500 text-sm max-w-3xl">
-          NEXORA parses transcript text, structures the underlying technical principles into Markdown study sheets, captures vocabulary, maps homework guidelines, and measures student engagement.
+          NEXORA parses real classroom lecture transcripts, structures technical principles into Markdown study sheets, captures vocabulary, maps homework guidelines, and measures student engagement.
         </p>
       </div>
+
+      {/* Active Live Classroom Session Link Banner (Real Data Flow) */}
+      {activeSession && (
+        <div className="p-5 rounded-2xl bg-purple-50/70 border border-purple-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0">
+              <Radio className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${activeSession.status === "LIVE" ? "bg-emerald-500 animate-pulse" : "bg-purple-500"}`}></span>
+                <span className="text-[10px] font-mono font-bold text-purple-700 uppercase tracking-wider">
+                  {activeSession.status === "LIVE" ? "Live Classroom Session Active" : "Finalized Lecture Session"}
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white text-purple-700 border border-purple-200">
+                  #{activeSession.id}
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-gray-900 mt-0.5">{activeSession.title}{activeSession.subject ? ` (${activeSession.subject})` : ""}</h4>
+            </div>
+          </div>
+
+          {activeSession.transcript && activeSession.transcript !== transcriptText && (
+            <button
+              onClick={handleImportSessionTranscript}
+              className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm shrink-0"
+            >
+              <Download className="w-3.5 h-3.5" /> Import Session Transcript
+            </button>
+          )}
+        </div>
+      )}
+
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
@@ -99,40 +279,63 @@ export default function ModuleNLPAndSummary() {
         <div className="lg:col-span-6 bg-white p-6 lg:p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6 flex flex-col justify-between">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-display font-bold text-lg text-gray-900 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-purple-600" /> Lecture Transcript
-              </h3>
-              <button 
-                onClick={() => setTranscriptText("")}
-                className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1.5 transition-colors font-mono"
-              >
-                <RotateCcw className="w-3.5 h-3.5" /> Clear
-              </button>
-            </div>
-
-            {/* Quick pre-sets */}
-            <div className="space-y-2">
-              <span className="text-[10px] uppercase font-mono tracking-wider font-semibold text-gray-400 block">Apply Academic Samples</span>
-              <div className="flex flex-col gap-2">
-                {samples.map((s, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleApplySample(s.text)}
-                    className="w-full text-left p-3 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50/20 text-xs font-medium text-gray-700 transition-all flex items-center justify-between group"
-                  >
-                    <span>{s.title}</span>
-                    <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-purple-600 transition-all" />
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                <h3 className="font-display font-bold text-lg text-gray-900 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-purple-600" /> Lecture Transcript
+                </h3>
+                {transcriptStatus === "READY" && transcriptText && (
+                  <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">
+                    Live Verified
+                  </span>
+                )}
               </div>
+              {transcriptText && (
+                <button 
+                  onClick={handleClear}
+                  className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1.5 transition-colors font-mono"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Clear
+                </button>
+              )}
             </div>
 
-            <textarea
-              value={transcriptText}
-              onChange={(e) => setTranscriptText(e.target.value)}
-              placeholder="Paste a classroom transcript or select a pre-made sample from above to begin summary & NLP processing..."
-              className="w-full h-64 p-4 rounded-2xl glass-input text-sm leading-relaxed"
-            />
+            {transcriptStatus === "LOADING" ? (
+              <div className="w-full h-72 rounded-2xl bg-purple-50/30 border border-purple-100 flex flex-col items-center justify-center space-y-3 text-center p-6">
+                <Cpu className="w-7 h-7 text-purple-500 animate-spin" />
+                <span className="text-sm font-semibold text-gray-700">Loading lecture transcript...</span>
+                <p className="text-xs text-gray-400 max-w-xs">Retrieving speech-to-text transcript records from PostgreSQL database.</p>
+              </div>
+            ) : transcriptStatus === "ERROR" ? (
+              <div className="w-full h-72 rounded-2xl bg-red-50/50 border border-red-200 flex flex-col items-center justify-center space-y-3 text-center p-6">
+                <AlertCircle className="w-8 h-8 text-red-500" />
+                <span className="text-sm font-bold text-red-800">Unable to load lecture transcript.</span>
+                <p className="text-xs text-red-600 max-w-xs">{fetchError || "An error occurred querying the database."}</p>
+                <button
+                  onClick={() => loadSessionData()}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-sm"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Retry
+                </button>
+              </div>
+            ) : (
+              <textarea
+                value={transcriptText}
+                onChange={(e) => {
+                  setTranscriptText(e.target.value);
+                  if (e.target.value.trim()) {
+                    setTranscriptStatus("READY");
+                  } else {
+                    setTranscriptStatus("NO_TRANSCRIPT");
+                  }
+                }}
+                placeholder={
+                  transcriptStatus === "NO_TRANSCRIPT"
+                    ? "No transcript available for this session. Real transcripts will stream from the Live Classroom speech-to-text recording, or you can paste a lecture transcript here..."
+                    : "Lecture transcript..."
+                }
+                className="w-full h-72 p-4 rounded-2xl glass-input text-sm leading-relaxed font-sans"
+              />
+            )}
 
             {activeTab === "summary" && (
               <div className="space-y-2">
@@ -201,22 +404,32 @@ export default function ModuleNLPAndSummary() {
             {loading && (
               <div className="h-full flex flex-col items-center justify-center space-y-3 text-center">
                 <Cpu className="w-8 h-8 text-purple-500 animate-spin" />
-                <span className="text-sm font-semibold text-gray-600">Engaging Gemini 3.5 Flash Model...</span>
+                <span className="text-sm font-semibold text-gray-600">Processing Transcript with AI Engine...</span>
                 <p className="text-xs text-gray-400 max-w-xs">Restructuring knowledge base and formulating semantic takeaways.</p>
+              </div>
+            )}
+
+            {apiError && !loading && (
+              <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-3 mb-4">
+                <AlertCircle className="w-5 h-5 shrink-0 text-red-500" />
+                <div>
+                  <p className="font-bold">AI Processing Notice</p>
+                  <p className="text-[11px] text-red-600 mt-0.5">{apiError}</p>
+                </div>
               </div>
             )}
 
             {!loading && activeTab === "summary" && (
               <div className="space-y-4">
-                {summaryResult ? (
+                {summaryResult && !apiError ? (
                   <div className="prose prose-sm prose-purple select-text leading-relaxed text-gray-700 font-sans break-words whitespace-pre-wrap">
                     {summaryResult}
                   </div>
-                ) : (
+                ) : !apiError && (
                   <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 py-16 space-y-2">
                     <BookMarked className="w-10 h-10 text-gray-300" />
                     <span className="font-semibold text-sm">No summary generated yet</span>
-                    <p className="text-xs text-gray-400 max-w-xs">Pasting a transcript and clicking "Compile Study Guide" will generate an academically detailed, Markdown-formatted notes sheet.</p>
+                    <p className="text-xs text-gray-400 max-w-xs">Enter or import a real lecture transcript and click "Compile Study Guide" to generate an academically detailed Markdown study sheet.</p>
                   </div>
                 )}
               </div>

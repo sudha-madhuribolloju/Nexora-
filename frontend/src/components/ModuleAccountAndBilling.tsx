@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   User,
   Settings,
@@ -16,15 +16,25 @@ import {
   DollarSign
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function ModuleAccountAndBilling() {
+  const { user } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState<"profile" | "settings" | "notifications" | "billing">("profile");
 
   // Profile Form State
-  const [name, setName] = useState("Prof. Sudha Madhuri.");
-  const [email, setEmail] = useState("srinivasb.mwa@gmail.com");
-  const [bio, setBio] = useState("Course Instructor of Theoretical Quantum Physics and molecular genetics. Passionate about teaching with Gemini LLM models.");
+  const [name, setName] = useState(user?.fullName || "");
+  const [email, setEmail] = useState(user?.email || "");
+  const [bio, setBio] = useState(user?.bio || "");
   const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      if (user.fullName) setName(user.fullName);
+      if (user.email) setEmail(user.email);
+      if (user.bio) setBio(user.bio);
+    }
+  }, [user]);
 
   // Billing states
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");

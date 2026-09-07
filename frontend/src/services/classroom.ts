@@ -72,11 +72,26 @@ export const classroomService = {
 
   /**
    * Process a teacher's recorded audio input to recognize their voiceprint and return transcription.
-   * Calls Whisper / Vocal biometrics via FastAPI backend.
+   * Calls Whisper / Vocal biometrics via FastAPI backend with optional classroom_session_id link.
    */
-  processVoice: async (speakerName: string): Promise<VoiceProcessingResult> => {
+  processVoice: async (speakerName?: string, classroomSessionId?: string, audioBlob?: Blob): Promise<VoiceProcessingResult> => {
+    if (audioBlob && audioBlob.size > 0) {
+      const formData = new FormData();
+      formData.append("file", audioBlob, "voice_recording.webm");
+      if (speakerName) {
+        formData.append("speakerName", speakerName);
+        formData.append("speaker", speakerName);
+      }
+      if (classroomSessionId) {
+        formData.append("classroom_session_id", classroomSessionId);
+      }
+      return api.postForm<VoiceProcessingResult>("/ai/voice-processing", formData);
+    }
+
     return api.post<VoiceProcessingResult>("/ai/voice-processing", {
-      speakerName,
+      speakerName: speakerName || "Instructor",
+      speaker: speakerName || "Instructor",
+      classroom_session_id: classroomSessionId,
     });
   },
 

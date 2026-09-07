@@ -12,12 +12,43 @@ export const setTokens = (accessToken: string, refreshToken?: string): void => {
   }
 };
 
+export const isTokenExpired = (token: string): boolean => {
+  try {
+    const payloadBase64 = token.split(".")[1];
+    if (!payloadBase64) return true;
+    const normalized = payloadBase64.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(normalized)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    const payload = JSON.parse(jsonPayload);
+    if (payload && payload.exp) {
+      return payload.exp * 1000 < Date.now();
+    }
+  } catch {
+    return false;
+  }
+  return false;
+};
+
 export const getAccessToken = (): string | null => {
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (token && isTokenExpired(token)) {
+    clearTokens();
+    return null;
+  }
+  return token;
 };
 
 export const getRefreshToken = (): string | null => {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
+  const token = localStorage.getItem(REFRESH_TOKEN_KEY);
+  if (token && isTokenExpired(token)) {
+    clearTokens();
+    return null;
+  }
+  return token;
 };
 
 export const clearTokens = (): void => {

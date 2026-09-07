@@ -20,10 +20,9 @@ export default function Navbar() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const notifications = [
-    { id: "1", title: "Dr. Sarah Jenkins started Live Classroom", time: "Just Now", type: "success" },
-    { id: "2", title: "New AI Note compiled for Quantum Dynamics", time: "10m ago", type: "info" },
-    { id: "3", title: "NEXORA detected student distraction spike (15%)", time: "25m ago", type: "warning" },
-    { id: "4", title: "PostgreSQL pgvector index synchronized", time: "1h ago", type: "success" },
+    { id: "1", title: "Live Classroom Speech Recognition Ready", time: "Active", type: "success" },
+    { id: "2", title: "AI Academic Assistants Online", time: "Ready", type: "info" },
+    { id: "3", title: "PostgreSQL Database Connected", time: "System", type: "success" },
   ];
 
   const currentRole = user?.role || "Student";

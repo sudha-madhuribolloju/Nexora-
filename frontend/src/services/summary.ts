@@ -77,4 +77,33 @@ export const summaryService = {
       subject,
     });
   },
+
+  /**
+   * Get all session data (transcript, summary, nlp) for a specific lecture session.
+   */
+  getSessionData: async (sessionId: string): Promise<any> => {
+    return api.get<any>(`/lecture/sessions/${sessionId}`);
+  },
+
+  /**
+   * Get transcript for a specific lecture session.
+   */
+  getSessionTranscript: async (sessionId: string): Promise<{ session_id: string; transcript: string; status: string }> => {
+    return api.get<{ session_id: string; transcript: string; status: string }>(`/lecture/sessions/${sessionId}/transcript`);
+  },
+
+  /**
+   * Get summary for a specific lecture session.
+   */
+  getSessionSummary: async (sessionId: string): Promise<{ session_id: string; summary: string; status: string }> => {
+    return api.get<{ session_id: string; summary: string; status: string }>(`/lecture/sessions/${sessionId}/summary`);
+  },
+
+  /**
+   * Get NLP insights for a specific lecture session.
+   */
+  getSessionNLP: async (sessionId: string): Promise<NLPAnalysis & { session_id: string; status: string }> => {
+    return api.get<NLPAnalysis & { session_id: string; status: string }>(`/lecture/sessions/${sessionId}/nlp`);
+  },
 };
+
